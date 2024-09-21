@@ -1,0 +1,130 @@
+#ifndef __PERIPHERALS_H__
+
+		#define P_CLK 60000000
+		
+		typedef volatile unsigned char __uint8_t;
+		typedef volatile unsigned short int __uint16_t;
+		typedef volatile unsigned int __uint32_t;
+		
+		typedef volatile signed char __int8_t;
+		typedef volatile signed short int __int16_t;
+		typedef volatile signed int __int32_t;
+		
+		typedef volatile float __double32_t;
+		typedef volatile double __double64_t;
+		
+	#endif
+	
+/* ------------------------------------------------------------------------------------------------- */
+	#define UART0_TxD_PIN		(1 << 0)		/* UART0 TxD Functionality is available on P0.0 [01] */ 
+	#define UART0_RxD_PIN		(1 << 2)		/* UART0 RxD Functionality is available on P0.1 [01] */ 
+	
+	#define UART1_TxD_PIN		(1 << 16)		/* UART1 TxD Functionality is available on P0.8 [01] */ 
+	#define UART1_RxD_PIN		(1 << 18)		/* UART1 RxD Functionality is available on P0.9 [01] */ 
+	
+	#define UART_INTERRUPT_CHANNEL	6		/* The Interrupt Source for UART is Channel 6 */
+/* ------------------------------------------------------------------------------------------------- */
+	
+/* ------------------------------------------------------------------------------------------------- */
+	#define BAUD_RATE					115200						/* The chosen baud rate is 115200 bits per second */
+	//#define BAUD_RATE					9600						/* The chosen baud rate is 9600 bits per second */
+	#define UART_SPEED_VAL		(P_CLK / (16 * BAUD_RATE))			
+	#define UART_DLAB_BIT			(1 << 7)					/* The DLAB bit position in U0LCR register is 7 */
+/* ------------------------------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------------------------------- */
+	void UART_TX_CHAR(__uint8_t DATA)
+	{
+		//while(((U1LSR >> 5) & 1) == 0);
+		
+		//U1THR = DATA;
+		
+		while(((U0LSR >> 5) & 1) == 0);
+		
+		U0THR = DATA;
+	}
+/* ------------------------------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------------------------------- */
+	__uint8_t UART_RX_CHAR(void)
+	{
+		//while(((U1LSR >> 0) & 1) == 0);
+		
+		//return U1RBR;
+		
+		while(((U0LSR >> 0) & 1) == 0);
+		
+		return U0RBR;
+	}
+/* ------------------------------------------------------------------------------------------------- */
+	
+/* ------------------------------------------------------------------------------------------------- */
+	void UART_TX_STRING(__uint8_t *STR)
+	{
+		while(*STR != '\0')
+			UART_TX_CHAR(*STR++);
+	}
+/* ------------------------------------------------------------------------------------------------- */
+	
+/* ------------------------------------------------------------------------------------------------- */
+	void UART_TX_INTEGER(__int32_t I_NUMBER)
+	{
+		__uint8_t CA[16];
+		__int8_t i = 0;
+		if(I_NUMBER == 0)
+			UART_TX_CHAR('0');
+		else
+		{
+			if(I_NUMBER < 0)
+			{
+				UART_TX_CHAR('-');
+				I_NUMBER = -I_NUMBER;
+			}
+			while(I_NUMBER > 0)
+			{
+				CA[i] = (I_NUMBER % 10) + 48;
+				I_NUMBER /= 10;
+				++i;
+			}
+			while(--i >= 0)
+				UART_TX_CHAR(CA[i]);
+		}
+	}
+/* ------------------------------------------------------------------------------------------------- */
+	
+/* ------------------------------------------------------------------------------------------------- */
+	void UART_TX_FLOAT(__double32_t F)
+	{
+		__uint32_t T = F;
+		UART_TX_INTEGER(T);
+		UART_TX_CHAR('.');
+		T = (F - T) * 100;
+		UART_TX_INTEGER(T);
+	}
+/* ------------------------------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------------------------------- */
+	void UART0_Init_Polling(void)
+	{
+		PINSEL0 |= (UART0_TxD_PIN | UART0_RxD_PIN);		/* Select the pin functionality of P0.0 & P0.1 */
+		
+		U0LCR = (0x03 | UART_DLAB_BIT);			/* Select the 8N1 Frame Format and ENABLE the DLAB bit */
+
+		U0DLL = UART_SPEED_VAL;							/* Assign the value to the Divisor Latch Low Register */
+
+		U0LCR = (0x03 & ~UART_DLAB_BIT);		/* CLEAR the DLAB bit so as to access the buffer registers */
+	}		
+/* ------------------------------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------------------------------- */
+	void UART1_Init_Polling(void)
+	{
+		PINSEL0 |= (UART1_TxD_PIN | UART1_RxD_PIN);		/* Select the pin functionality of P0.8 & P0.9 */
+		
+		U1LCR = (0x03 | UART_DLAB_BIT);			/* Select the 8N1 Frame Format and ENABLE the DLAB bit */
+
+		U1DLL = UART_SPEED_VAL;							/* Assign the value to the Divisor Latch Low Register */
+
+		U1LCR = (0x03 & ~UART_DLAB_BIT);		/* CLEAR the DLAB bit so as to access the buffer registers */
+	}		
+/* ------------------------------------------------------------------------------------------------- */
